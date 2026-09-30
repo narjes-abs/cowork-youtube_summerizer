@@ -1,0 +1,141 @@
+<title>Video Summary</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500&family=IBM+Plex+Sans:wght@400;600&display=swap">
+<style>
+  /* Layout: single reading column; TL;DR first, then collapsible sections with timestamp links, then takeaways. */
+  :root {
+    --bg: #f5f6f8; --surface: #ffffff; --fg: #16181d; --muted: #565c68;
+    --line: #dde0e6; --accent: #0b6e8a; --accent-bg: #e3f1f5;
+    --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #101317; --surface: #171b21; --fg: #eceef2; --muted: #9aa1ad;
+      --line: #2a3038; --accent: #62c3df; --accent-bg: #12303a; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #101317; --surface: #171b21; --fg: #eceef2; --muted: #9aa1ad;
+    --line: #2a3038; --accent: #62c3df; --accent-bg: #12303a; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--fg); font: 16px/1.6 var(--font-body);
+    padding-inline: 16px; padding-block: 24px 64px; }
+  main { max-width: 760px; margin-inline: auto; display: flex; flex-direction: column; gap: 14px; }
+  .cost { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); margin: 0;
+    overflow-wrap: anywhere; }
+  h1 { font-size: 1.4rem; line-height: 1.3; margin: 0; text-wrap: balance; }
+  .source { color: var(--muted); font-size: 0.875rem; margin: 0; }
+  .source a { color: var(--accent); }
+  .tldr { background: var(--accent-bg); border-radius: 6px; padding: 14px 16px; margin: 0;
+    font-size: 1.05rem; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; }
+  button { font: inherit; font-size: 0.9rem; cursor: pointer; padding: 8px 14px; border-radius: 6px;
+    border: 1px solid var(--line); background: var(--surface); color: var(--fg); }
+  button:hover { border-color: var(--accent); }
+  a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  details { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+  summary { cursor: pointer; padding: 12px 16px; font-weight: 600; display: flex; gap: 12px;
+    align-items: baseline; min-width: 0; }
+  summary span { min-width: 0; overflow-wrap: anywhere; }
+  .ts { font-family: var(--font-mono); font-weight: 500; font-size: 0.85rem; color: var(--accent);
+    white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .body { padding: 0 16px 12px; }
+  ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+  h2 { font-size: 1rem; margin: 14px 0 0; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--muted); }
+  .error { color: var(--muted); }
+  @media (prefers-reduced-motion: no-preference) { button { transition: border-color 0.15s; } }
+</style>
+<main id="app"></main>
+<script>
+const DATA = /*__SUMMARY_JSON__*/ null;
+
+function fmt(sec) {
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+  const pad = (n) => String(n).padStart(2, "0");
+  return h ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+}
+
+function el(tag, props, ...kids) {
+  const node = document.createElement(tag);
+  Object.assign(node, props || {});
+  for (const k of kids) node.append(k);
+  return node;
+}
+
+function link(d, t) {
+  return `https://youtu.be/${encodeURIComponent(d.video_id)}` + (t ? `?t=${t}` : "");
+}
+
+function toMarkdown(d) {
+  let md = `# ${d.title}\n\n> ${d.tldr}\n\n`;
+  for (const s of d.sections) {
+    md += `## ${s.title} ([${fmt(s.start)}](${link(d, s.start)}))\n`;
+    md += s.bullets.map((b) => `- ${b}`).join("\n") + "\n\n";
+  }
+  if (d.takeaways.length) {
+    md += `## Key takeaways\n` + d.takeaways.map((t) => `- ${t}`).join("\n") + "\n";
+  }
+  md += `\nSource: ${link(d, 0)}\n`;
+  return md;
+}
+
+async function copyText(text, btn) {
+  let ok = true;
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (e) {
+    const ta = el("textarea", { value: text });
+    document.body.append(ta);
+    ta.select();
+    try { ok = document.execCommand("copy"); } catch (e2) { ok = false; }
+    ta.remove();
+  }
+  const old = btn.textContent;
+  btn.textContent = ok ? "Copied" : "Copy failed, select the text manually";
+  setTimeout(() => (btn.textContent = old), 2000);
+}
+
+function render(d) {
+  const app = document.getElementById("app");
+  const md = toMarkdown(d);
+  const copyBtn = el("button", { id: "copy-md", textContent: "Copy as Markdown" });
+  copyBtn.onclick = () => copyText(md, copyBtn);
+
+  if (d.cost) app.append(el("p", { className: "cost", textContent: `cost: ${d.cost}` }));
+  app.append(
+    el("h1", { textContent: d.title }),
+    el("p", { className: "source" }, el("a", { href: link(d, 0), target: "_blank", rel: "noopener", textContent: "Watch on YouTube" })),
+    el("p", { className: "tldr", textContent: d.tldr }),
+    el("div", { className: "toolbar" }, copyBtn),
+  );
+
+  d.sections.forEach((s, i) => {
+    const ts = el("a", { className: "ts", href: link(d, s.start), target: "_blank", rel: "noopener",
+      textContent: fmt(s.start), title: "Open the video at this moment" });
+    ts.onclick = (e) => e.stopPropagation();
+    const ul = el("ul");
+    s.bullets.forEach((b) => ul.append(el("li", { textContent: b })));
+    app.append(el("details", { open: i === 0 },
+      el("summary", null, ts, el("span", { textContent: s.title })),
+      el("div", { className: "body" }, ul)));
+  });
+
+  if (d.takeaways.length) {
+    const ul = el("ul");
+    d.takeaways.forEach((t) => ul.append(el("li", { textContent: t })));
+    app.append(el("h2", { textContent: "Key takeaways" }), ul);
+  }
+}
+
+if (DATA) {
+  render(DATA);
+} else {
+  document.getElementById("app").append(
+    el("p", { className: "error", textContent: "No summary data was embedded in this page." })
+  );
+}
+</script>

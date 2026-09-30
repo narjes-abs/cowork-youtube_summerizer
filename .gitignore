@@ -1,0 +1,15 @@
+# Python virtual environment (panel/setup.sh recreates it)
+.claude/skills/yt-summary/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Your private summary history (stays on your machine)
+panel/data/
+
+# macOS
+.DS_Store
+
+# Claude Code local, machine-specific files
+.claude/settings.local.json
+.claude/launch.json
