@@ -18,6 +18,8 @@ Open http://localhost:8000
 
 Accepted key: an **OpenRouter** key (`sk-or-…`) or an **Anthropic** key (`sk-ant-…`). Paste it into the key card on the panel's **Home** page and press **Test & save**.
 
+<img src="docs/images/home-key-card.png" alt="The Home page with the API key card" width="600">
+
 ## Limits
 
 - The video must have captions (auto-generated ones count). Videos without captions are reported and not summarized.

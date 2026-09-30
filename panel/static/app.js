@@ -320,7 +320,7 @@ function keyCard() {
   };
   draw();
   return el("section", { className: "key-card" },
-    el("h3", { textContent: "Anthropic API key" }),
+    el("h3", { textContent: "API key" }),
     el("p", { className: "hint", textContent: "Needed only for cloud options ($). Paste an OpenRouter key (sk-or-…, reaches Claude) or an Anthropic key (sk-ant-…). One key at a time; it is kept in your macOS Keychain and sent only to that provider. Use a dedicated key with a spend limit." }),
     el("div", { className: "form" }, input, save),
     status);
